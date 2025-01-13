@@ -1,11 +1,11 @@
 import Foundation
 
-// MARK: - Модель для данных цены
+// MARK: - Model for price data
 struct PriceData: Decodable {
     let prices: [[Double]]
 }
 
-// MARK: - Функция для получения данных с CoinGecko API
+// MARK: - Function to fetch data from CoinGecko API
 func fetchHistoricalData(from startDate: Int, to endDate: Int, completion: @escaping ([Double]?) -> Void) {
     let coinID = "mines-of-dalarnia"
     let vsCurrency = "usd"
@@ -14,32 +14,32 @@ func fetchHistoricalData(from startDate: Int, to endDate: Int, completion: @esca
 
     let task = URLSession.shared.dataTask(with: url) { data, response, error in
         guard let data = data, error == nil else {
-            print("Ошибка при запросе данных: \(error?.localizedDescription ?? "Неизвестная ошибка")")
+            print("Error fetching data: \(error?.localizedDescription ?? "Unknown error")")
             completion(nil)
             return
         }
 
         do {
-            // Печать полного ответа для проверки структуры данных
+            // Print the full response to inspect the data structure
             if let responseObject = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
-                print("Полный ответ: \(responseObject)")
+                print("Full response: \(responseObject)")
             }
             
             let response = try JSONDecoder().decode(PriceData.self, from: data)
-            let prices = response.prices.map { $0[1] } // Берем только цены
+            let prices = response.prices.map { $0[1] } // Extract only prices
             completion(prices)
         } catch {
-            print("Ошибка декодирования данных: \(error)")
+            print("Error decoding data: \(error)")
             completion(nil)
         }
     }
     task.resume()
 }
 
-// MARK: - Функция для расчета уровней Фибоначчи
+// MARK: - Function to calculate Fibonacci levels
 func calculateFibonacciLevels(minPrice: Double, maxPrice: Double) -> [String: Double] {
     guard minPrice <= maxPrice else {
-        fatalError("Минимальная цена должна быть меньше или равна максимальной цене.")
+        fatalError("The minimum price must be less than or equal to the maximum price.")
     }
 
     let diff = maxPrice - minPrice
@@ -53,7 +53,7 @@ func calculateFibonacciLevels(minPrice: Double, maxPrice: Double) -> [String: Do
     ]
 }
 
-// MARK: - Функция для классификации состояний
+// MARK: - Function to classify states
 func classifyStates(prices: [Double], levels: [String: Double]) -> [String] {
     let fib0 = levels["fib0"]!
     let fib0382 = levels["fib0382"]!
@@ -73,12 +73,12 @@ func classifyStates(prices: [Double], levels: [String: Double]) -> [String] {
     }
 }
 
-// MARK: - Функция для построения матрицы вероятностей переходов
+// MARK: - Function to build the transition probability matrix
 func buildTransitionMatrix(states: [String]) -> [[Double]] {
     let uniqueStates = Array(Set(states))
     var transitions = [String: [String: Int]]()
 
-    // Инициализация
+    // Initialization
     uniqueStates.forEach { state in
         transitions[state] = [:]
         uniqueStates.forEach { nextState in
@@ -86,14 +86,14 @@ func buildTransitionMatrix(states: [String]) -> [[Double]] {
         }
     }
 
-    // Подсчет переходов
+    // Count transitions
     for i in 0..<states.count - 1 {
         let currentState = states[i]
         let nextState = states[i + 1]
         transitions[currentState]?[nextState, default: 0] += 1
     }
 
-    // Нормализация
+    // Normalize
     var matrix = [[Double]]()
     for state in uniqueStates {
         let totalTransitions = transitions[state]?.values.reduce(0, +) ?? 1
@@ -106,50 +106,50 @@ func buildTransitionMatrix(states: [String]) -> [[Double]] {
     return matrix
 }
 
-// Пример создания даты из строки в формате "yyyy-MM-dd"
+// Example of creating a timestamp from a string in "yyyy-MM-dd" format
 func createTimestamp(from dateString: String) -> Int {
     let dateFormatter = DateFormatter()
     dateFormatter.dateFormat = "yyyy-MM-dd"
     guard let date = dateFormatter.date(from: dateString) else {
-        fatalError("Неверный формат даты")
+        fatalError("Invalid date format")
     }
     return Int(date.timeIntervalSince1970)
 }
 
-// Пример задания начальной и конечной дат
-let startDateString = "2024-06-15" // Задайте вашу начальную дату в формате "yyyy-MM-dd"
-let endDateString = "2025-01-01" // Задайте вашу конечную дату в формате "yyyy-MM-dd"
+// Example of setting start and end dates
+let startDateString = "2024-06-15" // Specify your start date in the format "yyyy-MM-dd"
+let endDateString = "2025-01-01" // Specify your end date in the format "yyyy-MM-dd"
 
 let startDate = createTimestamp(from: startDateString)
 let endDate = createTimestamp(from: endDateString)
 
-let minPrice = 0.15 // Задайте вашу минимальную цену для точки 0 Фибоначчи
-let maxPrice = 0.217 // Задайте вашу максимальную цену для точки 1 Фибоначчи
+let minPrice = 0.15 // Specify your minimum price for the Fibonacci 0 level
+let maxPrice = 0.217 // Specify your maximum price for the Fibonacci 1 level
 
-// MARK: - Основной запуск программы
+// MARK: - Main program execution
 fetchHistoricalData(from: startDate, to: endDate) { priceData in
     guard let priceData = priceData else { return }
 
-    // Расчет уровней Фибоначчи
+    // Calculate Fibonacci levels
     let levels = calculateFibonacciLevels(minPrice: minPrice, maxPrice: maxPrice)
 
-    // Вывод уровней
-    print("Рекомендуемые уровни Фибоначчи для покупки и продажи:")
-    print("Покупка 20% на уровне 0.618: \(levels["fib0618"]!)")
-    print("Продажа на уровне 0.786: \(levels["fib0786"]!)")
-    print("Если продажа не удается, покупка 30% на уровне 0.5: \(levels["fib05"]!)")
-    print("Продажа на уровне 0.618: \(levels["fib0618"]!)")
-    print("Если продажа не удается, покупка 50% на уровне 0.382: \(levels["fib0382"]!)")
-    print("Продажа на уровне 0.5: \(levels["fib05"]!)")
+    // Output levels
+    print("Recommended Fibonacci levels for buying and selling:")
+    print("Buy 20% at level 0.618: \(levels["fib0618"]!)")
+    print("Sell at level 0.786: \(levels["fib0786"]!)")
+    print("If unable to sell, buy 30% at level 0.5: \(levels["fib05"]!)")
+    print("Sell at level 0.618: \(levels["fib0618"]!)")
+    print("If unable to sell, buy 50% at level 0.382: \(levels["fib0382"]!)")
+    print("Sell at level 0.5: \(levels["fib05"]!)")
     
-    // Классификация состояний
+    // Classify states
     let states = classifyStates(prices: priceData, levels: levels)
 
-    // Построение матрицы вероятностей переходов
+    // Build the transition probability matrix
     let transitionMatrix = buildTransitionMatrix(states: states)
 
-    // Вывод матрицы
-    print("Матрица переходов:")
+    // Output the matrix
+    print("Transition matrix:")
     transitionMatrix.forEach { row in
         print(row.map { String(format: "%.2f", $0) }.joined(separator: " "))
     }
